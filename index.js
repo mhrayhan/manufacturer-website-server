@@ -13,12 +13,24 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DV_USER}:${process.env.DV_PASS}@cluster0.x68zz.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
-client.connect(err => {
-  const collection = client.db("test").collection("devices");
-  console.log('database connected');
-  // perform actions on the collection object
-  client.close();
-});
+
+async function products() {
+  try {
+    await client.connect();
+    const productCollection = client.db('tools-cart').collection('products');
+    console.log('database connected');
+
+    // get all product from database API
+    app.get('/product', async (req, res) => {
+      const query = {};
+      const cursor = productCollection.find(query);
+      const products = await cursor.toArray();
+      res.send(products);
+    })
+  }
+  finally { }
+}
+products();
 
 
 app.get('/', (req, res) => {
