@@ -37,18 +37,26 @@ async function products() {
       const products = await productCollection.findOne(query);
       res.send(products);
     })
-
+    //Order post
     app.post('/purchase', async (req, res) => {
       const purchase = req.body;
       const result = await purchaseCollection.insertOne(purchase);
       res.send(result);
     })
-
+    //get order
     app.get('/purchase', async (req, res) => {
       const query = {};
       const cursor = purchaseCollection.find(query);
       const products = await cursor.toArray();
       res.send(products);
+    })
+    // order filter by email
+    app.get('/purchase/:email', async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const query = { userEmail: email }
+      const user = await purchaseCollection.findOne(query);
+      res.send(user);
     })
 
 
