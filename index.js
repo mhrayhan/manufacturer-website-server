@@ -44,12 +44,6 @@ async function products() {
       res.send(result);
     })
 
-    app.post('/review', async (req, res) => {
-      const review = req.body;
-      const result = await reviewsCollection.insertOne(review);
-      res.send(result);
-    })
-
     app.get('/purchase', async (req, res) => {
       const query = {};
       const cursor = purchaseCollection.find(query);
@@ -57,6 +51,20 @@ async function products() {
       res.send(products);
     })
 
+
+    //review store in database
+    app.post('/review', async (req, res) => {
+      const review = req.body;
+      const result = await reviewsCollection.insertOne(review);
+      res.send(result);
+    })
+    //get review from database
+    app.get('/review', async (req, res) => {
+      const query = {};
+      const cursor = reviewsCollection.find(query);
+      const reviews = await cursor.toArray();
+      res.send(reviews);
+    })
 
   }
   finally { }
