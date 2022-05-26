@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
@@ -8,11 +9,24 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-
-
 const uri = `mongodb+srv://${process.env.DV_USER}:${process.env.DV_PASS}@cluster0.x68zz.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: 'Unauthorized Access' });
+  }
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden Access' })
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 async function products() {
   try {
@@ -20,6 +34,7 @@ async function products() {
     const productCollection = client.db('tools-cart').collection('products');
     const purchaseCollection = client.db('tools-cart').collection('purchase');
     const reviewsCollection = client.db('tools-cart').collection('reviews');
+    const userCollection = client.db('tools-cart').collection('users');
     console.log('database connected');
 
     // get all product from database by this API
@@ -44,19 +59,24 @@ async function products() {
       res.send(result);
     })
     //get order
-    app.get('/purchase', async (req, res) => {
+    app.get('/purchase', verifyToken, async (req, res) => {
+      const email = req.query.userEmail;
       const query = {};
-      const cursor = purchaseCollection.find(query);
-      const products = await cursor.toArray();
-      res.send(products);
+      const decodedEmail = req.decoded.email;
+      if (email === decodedEmail) {
+        const cursor = purchaseCollection.find(query);
+        const products = await cursor.toArray();
+        return res.send(products);
+      }
+      else return res.status(403).send({ message: 'Forbidden Access' })
     })
     // order filter by email
-    app.get('/purchase/:email', async (req, res) => {
-      const email = req.params.email;
+    app.get('/purchase', async (req, res) => {
+      const email = req.query.userEmail;
       console.log(email);
       const query = { userEmail: email }
-      const user = await purchaseCollection.findOne(query);
-      res.send(user);
+      const purchase = await purchaseCollection.find(query).toArray();
+      res.send(purchase);
     })
 
 
@@ -72,6 +92,36 @@ async function products() {
       const cursor = reviewsCollection.find(query);
       const reviews = await cursor.toArray();
       res.send(reviews);
+    })
+
+
+
+    // post user data
+    app.put('/user/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      res.send({ result, token });
+    })
+
+    app.get('/user', verifyToken, async (req, res) => {
+      const users = await userCollection.find().toArray();
+      res.send(users)
+    })
+
+
+    //Delete API
+    app.delete('/purchase/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await purchaseCollection.deleteOne(query);
+      res.send(result);
     })
 
   }
