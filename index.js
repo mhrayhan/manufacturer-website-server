@@ -45,6 +45,12 @@ async function products() {
       res.send(products);
     })
 
+    app.post('/product', async (req, res) => {
+      const newItem = req.body;
+      const result = await productCollection.insertOne(newItem);
+      res.send(result);
+    })
+
     app.get('/product/:id', async (req, res) => {
       const id = req.params.id;
       // console.log(req.params);
@@ -94,6 +100,13 @@ async function products() {
       res.send(reviews);
     })
 
+
+    app.get('/admin/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === 'admin';
+      res.send({ admin: isAdmin });
+    })
 
     app.put('/user/admin/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
