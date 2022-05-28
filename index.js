@@ -85,10 +85,6 @@ async function products() {
       res.send(purchase);
     })
 
-
-
-
-
     //review store in database
     app.post('/review', async (req, res) => {
       const review = req.body;
